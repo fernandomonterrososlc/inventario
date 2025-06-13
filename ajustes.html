@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Ajustes de Inventario</title>
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font@5.x/css/materialdesignicons.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@3.6.14/dist/vuetify.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    body {
+      background-color: #f5f5f5;
+    }
+
+    .text-small {
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+    <v-app>
+      <v-container>
+        <h2 class="my-4">Ajustes de Inventario</h2>
+
+        <v-card class="pa-4 mb-6" elevation="5">
+          <h4 class="mb-3">Registrar Ajuste Manual</h4>
+          <v-form @submit.prevent="registrarAjuste" ref="formAjuste">
+            <v-row>
+              <v-col cols="12" md="4">
+                <v-select v-model="ajuste.id_producto" :items="productos" item-title="nombre_producto" item-value="id"
+                  label="Producto" required />
+              </v-col>
+              <v-col cols="12" md="4">
+                <v-select v-model="ajuste.id_almacen" :items="almacenes" item-title="nombre_almacen" item-value="id"
+                  label="Almacén" required />
+              </v-col>
+              <v-col cols="12" md="4">
+                <v-text-field label="Nuevo Stock" type="number" min="0" v-model.number="ajuste.stock_nuevo" required />
+              </v-col>
+              <v-col cols="12">
+                <v-textarea label="Motivo del Ajuste" v-model="ajuste.motivo" auto-grow required />
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-select v-model="ajuste.id_usuario" :items="usuarios" item-title="nombre" item-value="id"
+                  label="Usuario Responsable" required />
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-btn type="submit" color="primary" block prepend-icon="mdi-wrench">Aplicar Ajuste</v-btn>
+              </v-col>
+            </v-row>
+          </v-form>
+        </v-card>
+
+        <v-card elevation="3" class="pa-4">
+          <h4 class="mb-4">Historial de Ajustes</h4>
+
+          <v-row dense>
+            <v-col cols="12">
+              <v-text-field v-model="busqueda" label="Buscar por producto, usuario o motivo..."
+                prepend-inner-icon="mdi-magnify" class="mb-4" />
+            </v-col>
+          </v-row>
+
+          <v-data-table :headers="headers" :items="ajustes" :search="busqueda" items-per-page="10" density="compact"
+            class="elevation-1" hover>
+            <template #item.motivo="{ item }">
+              <span class="text-caption">{{ item.motivo }}</span>
+            </template>
+            <template #item.fecha_ajuste="{ item }">
+              <span class="text-caption">{{ item.fecha_ajuste }}</span>
+            </template>
+          </v-data-table>
+        </v-card>
+
+      </v-container>
+    </v-app>
+  </div>
+
+  <script src="https://unpkg.com/vue@3"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@3.6.14/dist/vuetify.min.js"></script>
+  <script>
+    const { createApp } = Vue;
+    const vuetify = Vuetify.createVuetify();
+
+    createApp({
+      data() {
+        return {
+          busqueda: '',
+          ajuste: {
+            id_producto: null,
+            id_almacen: null,
+            stock_nuevo: null,
+            motivo: '',
+            id_usuario: null
+          },
+          ajustes: [],
+          productos: [],
+          almacenes: [],
+          usuarios: [],
+          headers: [
+            { title: 'ID', key: 'id' },
+            { title: 'Producto', key: 'nombre_producto' },
+            { title: 'Almacén', key: 'nombre_almacen' },
+            { title: 'Stock Anterior', key: 'stock_anterior' },
+            { title: 'Stock Nuevo', key: 'stock_nuevo' },
+            { title: 'Motivo', key: 'motivo' },
+            { title: 'Usuario', key: 'nombre_usuario' },
+            { title: 'Fecha', key: 'fecha_ajuste' }
+          ]
+        };
+      },
+      methods: {
+        registrarAjuste() {
+          const producto = this.productos.find(p => p.id === this.ajuste.id_producto);
+          const almacen = this.almacenes.find(a => a.id === this.ajuste.id_almacen);
+          const usuario = this.usuarios.find(u => u.id === this.ajuste.id_usuario);
+
+          if (!producto || !almacen || !usuario || this.ajuste.stock_nuevo == null) {
+            Swal.fire('Error', 'Completa todos los campos.', 'warning');
+            return;
+          }
+
+          const stock_anterior = producto.stock;
+          producto.stock = this.ajuste.stock_nuevo;
+
+          this.ajustes.unshift({
+            id: this.ajustes.length + 1,
+            nombre_producto: producto.nombre_producto,
+            nombre_almacen: almacen.nombre_almacen,
+            stock_anterior: stock_anterior,
+            stock_nuevo: this.ajuste.stock_nuevo,
+            motivo: this.ajuste.motivo,
+            nombre_usuario: usuario.nombre,
+            fecha_ajuste: new Date().toLocaleString()
+          });
+
+          Swal.fire('¡Ajuste registrado!', 'Inventario actualizado correctamente.', 'success');
+
+          this.ajuste = {
+            id_producto: null,
+            id_almacen: null,
+            stock_nuevo: null,
+            motivo: '',
+            id_usuario: null
+          };
+        },
+        async cargarDummyData() {
+          this.usuarios = Array.from({ length: 5 }, (_, i) => ({
+            id: i + 1,
+            nombre: `Usuario ${i + 1}`
+          }));
+
+          this.almacenes = Array.from({ length: 4 }, (_, i) => ({
+            id: i + 1,
+            nombre_almacen: `Almacén ${i + 1}`
+          }));
+
+          await fetch('productos.json')
+            .then(res => res.json())
+            .then(data => {
+              this.productos = data.map(p => ({
+                id: p.id,
+                nombre_producto: p.nombre_producto,
+                stock: Math.floor(Math.random() * 100) + 10
+              }));
+            })
+            .catch(err => {
+              console.error('Error al cargar productos.json:', err);
+              Swal.fire('Error', 'No se pudieron cargar los productos.', 'error');
+            });
+
+
+          // this.productos = Array.from({ length: 10 }, (_, i) => ({
+          //   id: i + 1,
+          //   nombre_producto: `Producto ${i + 1}`,
+          //   stock: Math.floor(Math.random() * 100) + 10
+          // }));
+
+          for (let i = 1; i <= 20; i++) {
+            const p = this.productos[(i - 1) % 10];
+            const a = this.almacenes[(i - 1) % 4];
+            const u = this.usuarios[(i - 1) % 5];
+            const anterior = Math.floor(Math.random() * 100);
+            const nuevo = anterior + (Math.random() > 0.5 ? 10 : -5);
+
+            this.ajustes.push({
+              id: i,
+              nombre_producto: p.nombre_producto,
+              nombre_almacen: a.nombre_almacen,
+              stock_anterior: anterior,
+              stock_nuevo: nuevo,
+              motivo: `Ajuste por revisión física (${i})`,
+              nombre_usuario: u.nombre,
+              fecha_ajuste: new Date(Date.now() - i * 3600000).toLocaleString()
+            });
+          }
+        }
+      },
+      mounted() {
+        this.cargarDummyData();
+      }
+    }).use(vuetify).mount('#app');
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Categorías de Productos</title>
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font@6.x/css/materialdesignicons.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css" />
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@3.6.14/dist/vuetify.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    body {
+      background-color: #f9f9f9;
+    }
+
+    .categoria-icono {
+      font-size: 26px;
+      margin-right: 8px;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+    <v-app>
+      <v-container>
+        <h2 class="my-4">Categorías de Productos</h2>
+
+        <v-card class="pa-4 mb-6" elevation="4">
+          <v-row>
+            <v-col cols="12" md="6">
+              <v-text-field v-model="busqueda" label="Buscar categoría..." prepend-inner-icon="mdi-magnify" />
+            </v-col>
+            <v-col cols="12" md="6" class="d-flex justify-end align-end">
+              <v-btn color="primary" prepend-icon="mdi-plus" @click="abrirModal()">Nueva Categoría</v-btn>
+            </v-col>
+          </v-row>
+
+          <v-data-table :headers="headers" :items="categoriasFiltradas" item-value="id_categoria" class="mt-4"
+            density="compact" items-per-page="10">
+            <template #item.nombre_categoria="{ item }">
+              <v-icon class="categoria-icono">mdi-shape-outline</v-icon>
+              {{ item.nombre_categoria }}
+            </template>
+
+            <template #item.descripcion="{ item }">
+              <v-chip variant="tonal" color="blue-grey" class="text-capitalize" size="small">
+                {{ item.descripcion }}
+              </v-chip>
+            </template>
+
+            <template #item.acciones="{ item }">
+              <v-btn icon @click="editarCategoria(item)">
+                <v-icon>mdi-pencil</v-icon>
+              </v-btn>
+              <v-btn icon @click="eliminarCategoria(item)">
+                <v-icon color="red">mdi-delete</v-icon>
+              </v-btn>
+            </template>
+          </v-data-table>
+        </v-card>
+
+        <!-- Modal -->
+        <!-- Solo se muestra la sección del MODAL refactorizada -->
+        <v-dialog v-model="modal" max-width="500px">
+          <v-card>
+            <v-card-title class="text-h6">
+              {{ form.id_categoria ? 'Editar Categoría' : 'Nueva Categoría' }}
+            </v-card-title>
+
+            <v-form @submit.prevent="guardarCategoria" ref="form">
+              <v-card-text>
+                <v-row dense>
+                  <v-col cols="12">
+                    <v-text-field v-model="form.nombre_categoria" label="Nombre de Categoría" required />
+                  </v-col>
+                  <v-col cols="12">
+                    <v-textarea v-model="form.descripcion" label="Descripción" auto-grow rows="2" />
+                  </v-col>
+                </v-row>
+              </v-card-text>
+
+              <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn text @click="modal = false">Cancelar</v-btn>
+                <v-btn color="primary" type="submit">Guardar</v-btn>
+              </v-card-actions>
+            </v-form>
+          </v-card>
+        </v-dialog>
+
+      </v-container>
+    </v-app>
+  </div>
+
+  <script src="js/header.js"></script>
+  <script src="js/authGuard.js"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@3.6.14/dist/vuetify.min.js"></script>
+  <script>
+    const { createApp } = Vue;
+    const vuetify = Vuetify.createVuetify();
+
+    createApp({
+      data() {
+        return {
+          modal: false,
+          busqueda: '',
+          categorias: [],
+          form: {
+            id_categoria: null,
+            nombre_categoria: '',
+            descripcion: ''
+          },
+          headers: [
+            { title: 'Nombre', key: 'nombre_categoria' },
+            { title: 'Descripción', key: 'descripcion' },
+            { title: 'Acciones', key: 'acciones', sortable: false }
+          ]
+        };
+      },
+      computed: {
+        categoriasFiltradas() {
+          return this.categorias.filter(cat =>
+            cat.nombre_categoria.toLowerCase().includes(this.busqueda.toLowerCase())
+          );
+        }
+      },
+      methods: {
+        abrirModal() {
+          this.form = { id_categoria: null, nombre_categoria: '', descripcion: '' };
+          this.modal = true;
+        },
+        editarCategoria(cat) {
+          this.form = { ...cat };
+          this.modal = true;
+        },
+        guardarCategoria() {
+          if (!this.form.nombre_categoria) {
+            Swal.fire('Error', 'El nombre de la categoría es obligatorio.', 'error');
+            return;
+          }
+
+          if (this.form.id_categoria) {
+            const index = this.categorias.findIndex(c => c.id_categoria === this.form.id_categoria);
+            if (index !== -1) {
+              this.categorias[index] = { ...this.form };
+              Swal.fire('Editado', 'Categoría actualizada.', 'success');
+            }
+          } else {
+            const nueva = {
+              ...this.form,
+              id_categoria: Date.now()
+            };
+            this.categorias.push(nueva);
+            Swal.fire('Creada', 'Nueva categoría registrada.', 'success');
+          }
+          this.modal = false;
+        },
+        eliminarCategoria(cat) {
+          Swal.fire({
+            title: '¿Eliminar categoría?',
+            text: cat.nombre_categoria,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar'
+          }).then(result => {
+            if (result.isConfirmed) {
+              this.categorias = this.categorias.filter(c => c.id_categoria !== cat.id_categoria);
+              Swal.fire('Eliminada', 'Categoría eliminada.', 'success');
+            }
+          });
+        },
+        cargarDummy() {
+          const nombres = [
+            'Smartphones',
+            'Laptops',
+            'Tablets',
+            'Televisores',
+            'Audio y Sonido',
+            'Accesorios',
+            'Redes y Conectividad',
+            'Componentes de PC',
+            'Electrodomésticos',
+            'Gaming'
+          ];
+
+          for (let i = 0; i < nombres.length; i++) {
+            this.categorias.push({
+              id_categoria: i + 1,
+              nombre_categoria: nombres[i],
+              descripcion: `Categoría de ${nombres[i].toLowerCase()} y tecnología avanzada.`
+            });
+          }
+        }
+
+      },
+      mounted() {
+        this.cargarDummy();
+      }
+    }).use(vuetify).mount('#app');
+  </script>
+</body>
+
+</html>

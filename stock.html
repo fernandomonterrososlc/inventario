@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Stock por Almacén</title>
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font@6.x/css/materialdesignicons.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css" />
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@3.6.14/dist/vuetify.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    body {
+      background-color: #f9f9f9;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+    <v-app>
+      <v-container>
+        <h2 class="my-4">Consulta de Stock por Almacén</h2>
+
+        <v-card class="pa-4 mb-6" elevation="4">
+          <v-row>
+            <v-col cols="12" md="4">
+              <v-select
+                v-model="filtros.almacen"
+                :items="almacenes"
+                item-title="nombre_almacen"
+                item-value="id_almacen"
+                label="Filtrar por almacén"
+                clearable
+              />
+            </v-col>
+            <v-col cols="12" md="4">
+              <v-select
+                v-model="filtros.categoria"
+                :items="categorias"
+                item-title="nombre_categoria"
+                item-value="id_categoria"
+                label="Filtrar por categoría"
+                clearable
+              />
+            </v-col>
+            <v-col cols="12" md="4">
+              <v-text-field
+                v-model="filtros.busqueda"
+                label="Buscar producto"
+                prepend-inner-icon="mdi-magnify"
+                clearable
+              />
+            </v-col>
+          </v-row>
+        </v-card>
+
+        <v-card elevation="3" class="pa-4">
+          <v-data-table
+            :headers="headers"
+            :items="stockFiltrado"
+            items-per-page="10"
+            density="compact"
+            class="elevation-1"
+          >
+            <template #item.precio_venta="{ item }">
+              Q {{ item.precio_venta.toFixed(2) }}
+            </template>
+            <template #item.total_stock="{ item }">
+              {{ item.stock }}
+            </template>
+            <template #bottom>
+              <v-divider class="mt-2 mb-2" />
+              <div class="text-right font-weight-bold pr-4">
+                Total de productos listados: {{ stockFiltrado.length }}
+              </div>
+            </template>
+          </v-data-table>
+        </v-card>
+      </v-container>
+    </v-app>
+  </div>
+
+  <script src="https://unpkg.com/vue@3"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@3.6.14/dist/vuetify.min.js"></script>
+  <script>
+    const { createApp } = Vue;
+    const vuetify = Vuetify.createVuetify();
+
+    createApp({
+      data() {
+        return {
+          filtros: {
+            almacen: null,
+            categoria: null,
+            busqueda: ''
+          },
+          almacenes: [],
+          categorias: [],
+          stockData: [],
+          headers: [
+            { title: 'Código', key: 'codigo_producto' },
+            { title: 'Producto', key: 'nombre_producto' },
+            { title: 'Categoría', key: 'nombre_categoria' },
+            { title: 'Almacén', key: 'nombre_almacen' },
+            { title: 'Stock', key: 'stock' },
+            { title: 'Precio Venta', key: 'precio_venta' }
+          ]
+        };
+      },
+      computed: {
+        stockFiltrado() {
+          return this.stockData.filter(p => {
+            const porAlmacen = this.filtros.almacen ? p.id_almacen === this.filtros.almacen : true;
+            const porCategoria = this.filtros.categoria ? p.id_categoria === this.filtros.categoria : true;
+            const porBusqueda = this.filtros.busqueda
+              ? p.nombre_producto.toLowerCase().includes(this.filtros.busqueda.toLowerCase())
+              : true;
+            return porAlmacen && porCategoria && porBusqueda;
+          });
+        }
+      },
+      methods: {
+        cargarDummyData() {
+  this.almacenes = [
+    { id_almacen: 1, nombre_almacen: 'Almacén Central' },
+    { id_almacen: 2, nombre_almacen: 'Almacén Norte' },
+    { id_almacen: 3, nombre_almacen: 'Almacén Sur' }
+  ];
+
+  this.categorias = [
+    { id_categoria: 1, nombre_categoria: 'Electronico' },
+    { id_categoria: 2, nombre_categoria: 'Computo' },
+    { id_categoria: 3, nombre_categoria: 'Electrico' }
+  ];
+
+  fetch('productos.json')
+    .then(res => res.json())
+    .then(productos => {
+      this.stockData = productos.map((prod, i) => {
+        const alm = this.almacenes[i % this.almacenes.length];
+        const cat = this.categorias[i % this.categorias.length];
+        return {
+          id_producto: prod.id,
+          codigo_producto: prod.codigo_producto,
+          nombre_producto: prod.nombre_producto,
+          id_categoria: cat.id_categoria,
+          nombre_categoria: cat.nombre_categoria,
+          id_almacen: alm.id_almacen,
+          nombre_almacen: alm.nombre_almacen,
+          stock: Math.floor(Math.random() * 100),
+          precio_venta: parseFloat(prod.precio_venta)
+        };
+      });
+    })
+    .catch(err => {
+      console.error("Error al cargar productos.json:", err);
+      Swal.fire("Error", "No se pudieron cargar los productos.", "error");
+    });
+}
+
+      },
+      mounted() {
+        this.cargarDummyData();
+      }
+    }).use(vuetify).mount('#app');
+  </script>
+</body>
+
+</html>

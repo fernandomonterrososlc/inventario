@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Gestión de Usuarios</title>
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font@6.x/css/materialdesignicons.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css" />
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@3.6.14/dist/vuetify.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    body {
+      background-color: #f9f9f9;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+    <v-app>
+      <v-container>
+        <h2 class="my-4">Gestión de Usuarios</h2>
+
+        <v-card class="pa-4 mb-6" elevation="4">
+          <v-btn color="primary" prepend-icon="mdi-account-plus" @click="abrirModal()">Agregar Usuario</v-btn>
+
+          <v-data-table
+            :headers="headers"
+            :items="usuarios"
+            :search="busqueda"
+            items-per-page="10"
+            class="mt-4"
+            density="compact"
+          >
+            <template #top>
+              <v-text-field
+                v-model="busqueda"
+                label="Buscar usuario..."
+                prepend-inner-icon="mdi-magnify"
+                class="mb-3"
+              />
+            </template>
+
+            <template #item.acciones="{ item }">
+              <v-btn icon @click="abrirModal(item)">
+                <v-icon>mdi-pencil</v-icon>
+              </v-btn>
+              <v-btn icon @click="eliminarUsuario(item)">
+                <v-icon color="red">mdi-delete</v-icon>
+              </v-btn>
+            </template>
+          </v-data-table>
+        </v-card>
+
+        <!-- Modal de Usuario -->
+        <v-dialog v-model="modal" max-width="500px">
+          <v-card>
+            <v-card-title class="text-h6">
+              {{ form.id_usuario ? 'Editar Usuario' : 'Nuevo Usuario' }}
+            </v-card-title>
+
+            <v-form @submit.prevent="guardarUsuario" ref="form">
+              <v-card-text>
+                <v-row dense>
+                  <v-col cols="12">
+                    <v-text-field
+                      label="Nombre completo"
+                      v-model="form.nombre_completo"
+                      required
+                    />
+                  </v-col>
+                  <v-col cols="12">
+                    <v-text-field
+                      label="Correo"
+                      v-model="form.correo"
+                      type="email"
+                      required
+                    />
+                  </v-col>
+                  <v-col cols="12" v-if="!form.id_usuario">
+                    <v-text-field
+                      label="Contraseña"
+                      v-model="form.contrasena"
+                      type="text"
+                      required
+                    />
+                  </v-col>
+                  <v-col cols="12">
+                    <v-select
+                      v-model="form.id_rol"
+                      :items="roles"
+                      item-title="nombre_rol"
+                      item-value="id_rol"
+                      label="Rol"
+                      required
+                    />
+                  </v-col>
+                </v-row>
+              </v-card-text>
+
+              <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn text @click="modal = false">Cancelar</v-btn>
+                <v-btn color="primary" type="submit">Guardar</v-btn>
+              </v-card-actions>
+            </v-form>
+          </v-card>
+        </v-dialog>
+      </v-container>
+    </v-app>
+  </div>
+
+  <script src="js/header.js"></script>
+    <script src="js/authGuard.js"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@3.6.14/dist/vuetify.min.js"></script>
+  <script>
+    const { createApp } = Vue;
+    const vuetify = Vuetify.createVuetify();
+
+    createApp({
+      data() {
+        return {
+          busqueda: '',
+          modal: false,
+          form: {
+            id_usuario: null,
+            nombre_completo: '',
+            correo: '',
+            contrasena: '',
+            id_rol: null
+          },
+          roles: [],
+          usuarios: [],
+          headers: [
+            { title: 'ID', key: 'id_usuario' },
+            { title: 'Nombre', key: 'nombre_completo' },
+            { title: 'Correo', key: 'correo' },
+            { title: 'Rol', key: 'nombre_rol' },
+            { title: 'Acciones', key: 'acciones', sortable: false }
+          ]
+        };
+      },
+      methods: {
+        abrirModal(usuario = null) {
+          if (usuario) {
+            this.form = {
+              ...usuario,
+              contrasena: '********'
+            };
+          } else {
+            this.form = {
+              id_usuario: null,
+              nombre_completo: '',
+              correo: '',
+              contrasena: '',
+              id_rol: null
+            };
+          }
+          this.modal = true;
+        },
+        guardarUsuario() {
+          if (!this.form.nombre_completo || !this.form.correo || !this.form.id_rol) {
+            Swal.fire('Error', 'Completa todos los campos obligatorios.', 'error');
+            return;
+          }
+
+          if (this.form.id_usuario) {
+            const index = this.usuarios.findIndex(u => u.id_usuario === this.form.id_usuario);
+            if (index !== -1) {
+              this.usuarios[index] = {
+                ...this.form,
+                nombre_rol: this.roles.find(r => r.id_rol === this.form.id_rol).nombre_rol
+              };
+              Swal.fire('Actualizado', 'Usuario editado correctamente.', 'success');
+            }
+          } else {
+            const nuevo = {
+              ...this.form,
+              id_usuario: Date.now(),
+              nombre_rol: this.roles.find(r => r.id_rol === this.form.id_rol).nombre_rol
+            };
+            this.usuarios.push(nuevo);
+            Swal.fire('Agregado', 'Usuario registrado exitosamente.', 'success');
+          }
+
+          this.modal = false;
+        },
+        eliminarUsuario(usuario) {
+          Swal.fire({
+            title: '¿Eliminar usuario?',
+            text: usuario.nombre_completo,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar'
+          }).then(result => {
+            if (result.isConfirmed) {
+              this.usuarios = this.usuarios.filter(u => u.id_usuario !== usuario.id_usuario);
+              Swal.fire('Eliminado', 'Usuario eliminado.', 'success');
+            }
+          });
+        },
+        cargarDummyData() {
+          this.roles = [
+            { id_rol: 1, nombre_rol: 'Administrador' },
+            { id_rol: 2, nombre_rol: 'Operador' },
+            { id_rol: 3, nombre_rol: 'Vendedor' }
+          ];
+
+          for (let i = 1; i <= 20; i++) {
+            const rol = this.roles[i % 3];
+            this.usuarios.push({
+              id_usuario: i,
+              nombre_completo: `Usuario ${i}`,
+              correo: `usuario${i}@empresa.com`,
+              contrasena: '123456',
+              id_rol: rol.id_rol,
+              nombre_rol: rol.nombre_rol
+            });
+          }
+        }
+      },
+      mounted() {
+        this.cargarDummyData();
+      }
+    }).use(vuetify).mount('#app');
+  </script>
+</body>
+
+</html>

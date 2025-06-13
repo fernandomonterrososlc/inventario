@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Ventas - XYZ Inventario</title>
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@5.x/css/materialdesignicons.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/vuetify@3.6.14/dist/vuetify.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        body {
+            background: #f9fafb;
+        }
+
+        .text-sm {
+            font-size: 0.9rem;
+        }
+
+        .v-autocomplete .v-input__control {
+            min-height: 56px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <v-app>
+            <v-container>
+                <h2 class="my-4">Registro de Ventas</h2>
+
+                <!-- 🧾 Cabecera de la Venta -->
+                <v-card class="pa-5 mb-6" elevation="5">
+                    <h4 class="mb-4">Datos Generales</h4>
+                    <v-form ref="formVenta" @submit.prevent="registrarVenta">
+                        <v-row>
+                            <v-col cols="12" md="6">
+                                <v-text-field label="Nombre del Cliente" v-model="venta.nombre_cliente" required />
+                            </v-col>
+                            <v-col cols="12" md="6">
+                                <v-select v-model="venta.id_usuario" :items="usuarios" item-title="nombre"
+                                    item-value="id" label="Vendedor Responsable" required />
+                            </v-col>
+                        </v-row>
+                    </v-form>
+                </v-card>
+
+                <!-- 🧮 Agregar Productos -->
+                <v-card class="pa-5 mb-6" elevation="5">
+                    <h4 class="mb-4">Detalle de Productos</h4>
+                    <v-row>
+                        <v-col cols="12" md="5">
+                            <v-autocomplete label="Producto" :items="productos" item-title="nombreConStock"
+                                item-value="id" v-model="productoSeleccionado.id" return-object required />
+                        </v-col>
+                        <v-col cols="6" md="2">
+                            <v-text-field label="Cantidad" type="number" v-model.number="productoSeleccionado.cantidad"
+                                min="1" />
+                        </v-col>
+                        <v-col cols="6" md="2">
+                            <v-text-field label="Precio" type="number" v-model.number="productoSeleccionado.precio"
+                                min="0.01" />
+                        </v-col>
+                        <v-col cols="12" md="3">
+                            <v-btn color="primary" block @click="agregarProducto">Agregar Producto</v-btn>
+                        </v-col>
+                    </v-row>
+
+                    <!-- 🧾 Tabla de productos agregados -->
+                    <v-data-table :items="venta.detalle" :headers="detalleHeaders" class="mt-4" density="compact"
+                        hide-default-footer>
+                        <template #item.subtotal="{ item }">
+                            Q {{ (item.cantidad * item.precio).toFixed(2) }}
+                        </template>
+
+                        <template #item.accion="{ index }">
+                            <v-btn icon @click="quitarProducto(index)">
+                                <v-icon color="red">mdi-delete</v-icon>
+                            </v-btn>
+                        </template>
+                    </v-data-table>
+
+
+                    <div class="text-right mt-4 text-h6">
+                        Total: <strong>Q {{ totalVenta }}</strong>
+                    </div>
+
+                    <v-btn class="mt-4" color="success" block
+                        :disabled="!venta.nombre_cliente || !venta.id_usuario || venta.detalle.length === 0"
+                        @click="registrarVenta">
+                        Registrar Venta
+                    </v-btn>
+                </v-card>
+
+                <!-- 📋 Historial -->
+                <v-card elevation="3" class="pa-4">
+                    <h5>Historial de Ventas</h5>
+                    <h6> Total histórico: <span class="text-success">Q {{ totalHistorial }}</span></h6>
+                    <v-data-table :headers="headers" :items="historial" items-per-page="5" class="mt-2" />
+                    </v-data-table>
+                </v-card>
+
+            </v-container>
+        </v-app>
+    </div>
+
+    <script src="js/header.js"></script>
+    <script src="js/authGuard.js"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vuetify@3.6.14/dist/vuetify.min.js"></script>
+    <script>
+        const { createApp } = Vue;
+        const vuetify = Vuetify.createVuetify();
+
+        createApp({
+            data() {
+                return {
+                    venta: {
+                        nombre_cliente: '',
+                        id_usuario: null,
+                        detalle: []
+                    },
+                    productoSeleccionado: {
+                        id: null,
+                        cantidad: 1,
+                        precio: 0
+                    },
+                    historial: [],
+                    usuarios: [],
+                    productos: [],
+                    detalleHeaders: [
+                        { title: 'Producto', key: 'nombre_producto' },
+                        { title: 'Cantidad', key: 'cantidad' },
+                        { title: 'Precio', key: 'precio' },
+                        { title: 'Subtotal', key: 'subtotal' },
+                        { title: 'Acción', key: 'accion', sortable: false }
+                    ],
+
+
+                }
+            },
+            computed: {
+                totalVenta() {
+                    return this.venta.detalle.reduce((s, d) => s + (d.cantidad * d.precio), 0).toFixed(2);
+                },
+                totalHistorial() {
+                    return this.historial.reduce((sum, h) => {
+                        const num = parseFloat(h.total.replace('Q', '').trim());
+                        return sum + (isNaN(num) ? 0 : num);
+                    }, 0).toFixed(2);
+                }
+            },
+            methods: {
+                nombrePorId(id) {
+                    const u = this.usuarios.find(x => x.id === id);
+                    return u ? u.nombre : '';
+                },
+                agregarProducto() {
+                    const p = this.productoSeleccionado.id;
+                    if (!p || this.productoSeleccionado.cantidad <= 0 || this.productoSeleccionado.precio <= 0) {
+                        Swal.fire('Error', 'Completa los datos del producto.', 'warning');
+                        return;
+                    }
+                    if (this.productoSeleccionado.cantidad > p.stock) {
+                        Swal.fire('Stock insuficiente', `Solo hay ${p.stock} unidades.`, 'error');
+                        return;
+                    }
+                    this.venta.detalle.push({
+                        id_producto: p.id,
+                        nombre_producto: p.nombre_producto,
+                        cantidad: this.productoSeleccionado.cantidad,
+                        precio: this.productoSeleccionado.precio
+                    });
+                    p.stock -= this.productoSeleccionado.cantidad;
+                    this.productoSeleccionado = { id: null, cantidad: 1, precio: 0 };
+                },
+                quitarProducto(index) {
+                    const item = this.venta.detalle[index];
+                    const prod = this.productos.find(p => p.id === item.id_producto);
+                    if (prod) prod.stock += item.cantidad;
+                    this.venta.detalle.splice(index, 1);
+                },
+                registrarVenta() {
+                    const factura = 'FAC' + Date.now().toString().slice(-6);
+                    this.historial.unshift({
+                        codigo: factura,
+                        cliente: this.venta.nombre_cliente,
+                        vendedor: this.nombrePorId(this.venta.id_usuario),
+                        fecha: new Date().toLocaleString(),
+                        total: 'Q ' + this.totalVenta
+                    });
+                    Swal.fire('¡Venta registrada!', `Factura ${factura} creada con éxito.`, 'success');
+                    this.venta = { nombre_cliente: '', id_usuario: null, detalle: [] };
+                },
+                cargarDatos() {
+                    this.usuarios = [
+                        { id: 1, nombre: 'Carlos Méndez' },
+                        { id: 2, nombre: 'Andrea López' },
+                        { id: 3, nombre: 'Luis Pérez' }
+                    ];
+
+                    fetch('productos.json')
+                        .then(res => res.json())
+                        .then(data => {
+                            this.productos = data.map(p => ({
+                                ...p,
+                                stock: Math.floor(Math.random() * 30) + 10,
+                                get nombreConStock() {
+                                    return `${this.nombre_producto} (Stock: ${this.stock})`;
+                                }
+                            }));
+                        })
+                        .catch(err => {
+                            console.error('Error al cargar productos.json:', err);
+                            Swal.fire("Error", "No se pudieron cargar los productos.", "error");
+                        });
+                    // this.productos = Array.from({ length: 8 }, (_, i) => ({
+                    //     id: i + 1,
+                    //     nombre_producto: `Producto ${i + 1}`,
+                    //     stock: Math.floor(Math.random() * 30) + 10,
+                    //     get nombreConStock() {
+                    //         return `${this.nombre_producto} (Stock: ${this.stock})`;
+                    //     }
+                    // }));
+
+                    for (let i = 1; i <= 230; i++) {
+                        this.historial.push({
+                            codigo: `FAC${1000 + i}`,
+                            cliente: `Cliente ${i}`,
+                            vendedor: this.usuarios[i % 3].nombre,
+                            fecha: new Date(Date.now() - i * 86400000).toLocaleDateString(),
+                            total: 'Q ' + (Math.random() * 1503 + 50).toFixed(2)
+                        });
+                    }
+
+                }
+            },
+            mounted() {
+                this.cargarDatos();
+            },
+        }).use(vuetify).mount('#app');
+    </script>
+</body>
+
+</html>

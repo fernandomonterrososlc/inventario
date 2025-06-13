@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Almacenes - XYZ Inventario</title>
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font@4.x/css/materialdesignicons.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@3.6.14/dist/vuetify.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    body {
+      background: #f9fafb;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+    <v-app>
+      <v-container>
+        <h2 class="my-4">Gestión de Almacenes</h2>
+        <v-btn color="primary" prepend-icon="mdi-plus" class="mb-4" @click="abrirModal(null)">Agregar Almacén</v-btn>
+
+        <v-data-table :headers="headers" :items="almacenes" :search="busqueda" class="elevation-1" items-per-page="5">
+          <template #top>
+            <v-text-field v-model="busqueda" label="Buscar almacén..." prepend-inner-icon="mdi-magnify" class="mb-3" />
+          </template>
+
+          <template #item.acciones="{ item }">
+            <v-btn icon @click="abrirModal(item)">
+              <v-icon>mdi-pencil</v-icon>
+            </v-btn>
+            <v-btn icon @click="eliminarAlmacen(item)">
+              <v-icon color="red">mdi-delete</v-icon>
+            </v-btn>
+          </template>
+        </v-data-table>
+
+        <!-- Modal -->
+        <v-dialog v-model="modal" max-width="600px">
+          <v-card>
+            <v-card-title class="text-h6">
+              {{ almacenSeleccionado.id ? 'Editar Almacén' : 'Nuevo Almacén' }}
+            </v-card-title>
+
+            <v-form ref="form" @submit.prevent="guardarAlmacen">
+              <v-card-text>
+                <v-row dense>
+                  <v-col cols="12">
+                    <v-text-field label="Nombre del almacén" v-model="almacenSeleccionado.nombre_almacen" required />
+                  </v-col>
+                  <v-col cols="12">
+                    <v-text-field label="Dirección" v-model="almacenSeleccionado.direccion" required />
+                  </v-col>
+                  <v-col cols="12">
+                    <v-text-field label="Código" v-model="almacenSeleccionado.codigo_almacen" required />
+                  </v-col>
+                </v-row>
+              </v-card-text>
+
+              <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn color="grey" @click="modal = false">Cancelar</v-btn>
+                <v-btn color="primary" type="submit">Guardar</v-btn>
+              </v-card-actions>
+            </v-form>
+          </v-card>
+        </v-dialog>
+
+      </v-container>
+    </v-app>
+  </div>
+
+  <script src="js/header.js"></script>
+    <script src="js/authGuard.js"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@3.6.14/dist/vuetify.min.js"></script>
+  <script>
+    const { createApp } = Vue;
+    const vuetify = Vuetify.createVuetify();
+
+    createApp({
+      data() {
+        return {
+          busqueda: '',
+          modal: false,
+          headers: [
+            { title: 'Nombre', key: 'nombre_almacen' },
+            { title: 'Dirección', key: 'direccion' },
+            { title: 'Código', key: 'codigo_almacen' },
+            { title: 'Acciones', key: 'acciones', sortable: false }
+          ],
+          almacenes: [],
+          almacenSeleccionado: this.nuevoAlmacen()
+        };
+      },
+      methods: {
+        nuevoAlmacen() {
+          return {
+            id: null,
+            nombre_almacen: '',
+            direccion: '',
+            codigo_almacen: ''
+          };
+        },
+        abrirModal(almacen) {
+          this.almacenSeleccionado = almacen ? { ...almacen } : this.nuevoAlmacen();
+          this.modal = true;
+        },
+        guardarAlmacen() {
+          if (this.almacenSeleccionado.id) {
+            const index = this.almacenes.findIndex(a => a.id === this.almacenSeleccionado.id);
+            if (index !== -1) this.almacenes[index] = { ...this.almacenSeleccionado };
+            Swal.fire('¡Editado!', 'Almacén actualizado correctamente.', 'success');
+          } else {
+            this.almacenSeleccionado.id = Date.now();
+            this.almacenes.push({ ...this.almacenSeleccionado });
+            Swal.fire('¡Agregado!', 'Almacén creado exitosamente.', 'success');
+          }
+          this.modal = false;
+        },
+        eliminarAlmacen(almacen) {
+          Swal.fire({
+            title: '¿Eliminar almacén?',
+            text: almacen.nombre_almacen,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar'
+          }).then((result) => {
+            if (result.isConfirmed) {
+              this.almacenes = this.almacenes.filter(a => a.id !== almacen.id);
+              Swal.fire('Eliminado', 'Almacén eliminado.', 'success');
+            }
+          });
+        },
+        generarDummy() {
+          for (let i = 1; i <= 20; i++) {
+            this.almacenes.push({
+              id: i,
+              nombre_almacen: `Almacén ${i}`,
+              direccion: `Zona ${i}, Ciudad`,
+              codigo_almacen: `ALM${String(i).padStart(3, '0')}`
+            });
+          }
+        }
+      },
+      mounted() {
+        this.generarDummy();
+      }
+    }).use(vuetify).mount('#app');
+  </script>
+</body>
+
+</html>

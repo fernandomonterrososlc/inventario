@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Movimientos - XYZ Inventario</title>
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font@4.x/css/materialdesignicons.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@3.6.14/dist/vuetify.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    body {
+      background: #f9fafb;
+    }
+
+    .field-help {
+      font-size: 0.8rem;
+      color: gray;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+    <v-app>
+      <v-container>
+        <h2 class="my-4">Movimientos de Inventario</h2>
+
+        <v-card class="mb-6 pa-5" elevation="6">
+          <h4 class="mb-4">Registrar nuevo movimiento</h4>
+          <v-form @submit.prevent="registrarMovimiento">
+            <v-row>
+              <v-col cols="12" md="4">
+                <v-select :items="tiposMovimiento" v-model="movimiento.tipo" label="Tipo de Movimiento" required />
+              </v-col>
+              <v-col cols="12" md="4">
+                <v-select :items="almacenes" item-title="nombre_almacen" item-value="id" v-model="movimiento.id_almacen"
+                  label="Almacén" required />
+              </v-col>
+              <v-col cols="12" md="4">
+                <v-select :items="productos" item-title="nombre_producto" item-value="id"
+                  v-model="movimiento.id_producto" label="Producto" required />
+              </v-col>
+              <v-col cols="12" md="4">
+                <v-text-field v-model="movimiento.cantidad" label="Cantidad" type="number" min="1" required />
+                <div class="field-help" v-if="stockDisponible !== null">Stock actual: {{ stockDisponible }}</div>
+              </v-col>
+              <v-col cols="12" md="4">
+                <v-text-field v-model="movimiento.costo_unitario" label="Costo unitario (opcional)" type="number"
+                  min="0" />
+              </v-col>
+              <v-col cols="12" md="8">
+                <v-textarea label="Comentario" v-model="movimiento.comentario" auto-grow />
+              </v-col>
+              <v-col cols="12">
+                <v-btn type="submit" color="primary" block prepend-icon="mdi-check">Registrar Movimiento</v-btn>
+              </v-col>
+            </v-row>
+          </v-form>
+        </v-card>
+
+        <v-data-table :headers="headers" :items="movimientos" :items-per-page="5" class="elevation-1">
+          <template #top>
+            <h5>Historial de movimientos</h5>
+          </template>
+        </v-data-table>
+      </v-container>
+    </v-app>
+  </div>
+
+  <script src="js/header.js"></script>
+  <script src="js/authGuard.js"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@3.6.14/dist/vuetify.min.js"></script>
+  <script>
+    const { createApp } = Vue;
+    const vuetify = Vuetify.createVuetify();
+
+    createApp({
+      data() {
+        return {
+          tiposMovimiento: ['ENTRADA', 'SALIDA', 'AJUSTE'],
+          almacenes: [],
+          productos: [],
+          movimientos: [],
+          movimiento: {
+            tipo: '',
+            id_producto: null,
+            id_almacen: null,
+            cantidad: null,
+            costo_unitario: null,
+            comentario: ''
+          },
+          headers: [
+            { title: 'Fecha', key: 'fecha' },
+            { title: 'Tipo', key: 'tipo' },
+            { title: 'Producto', key: 'nombre_producto' },
+            { title: 'Almacén', key: 'nombre_almacen' },
+            { title: 'Cantidad', key: 'cantidad' },
+            { title: 'Comentario', key: 'comentario' }
+          ]
+        };
+      },
+      computed: {
+        stockDisponible() {
+          const p = this.productos.find(p => p.id === this.movimiento.id_producto);
+          return p ? p.stock : null;
+        }
+      },
+      methods: {
+        registrarMovimiento() {
+          const m = this.movimiento;
+
+          if (!m.tipo || !m.id_producto || !m.id_almacen || !m.cantidad) {
+            Swal.fire('Campos incompletos', 'Por favor llena todos los campos requeridos.', 'warning');
+            return;
+          }
+
+          const producto = this.productos.find(p => p.id === m.id_producto);
+          const almacen = this.almacenes.find(a => a.id === m.id_almacen);
+
+          if (m.tipo === 'SALIDA' && m.cantidad > producto.stock) {
+            Swal.fire('Stock insuficiente', 'No hay suficiente stock disponible.', 'error');
+            return;
+          }
+
+          if (m.tipo === 'ENTRADA') {
+            producto.stock += parseInt(m.cantidad);
+          } else if (m.tipo === 'SALIDA') {
+            producto.stock -= parseInt(m.cantidad);
+          } else if (m.tipo === 'AJUSTE') {
+            producto.stock = parseInt(m.cantidad);
+          }
+
+          this.movimientos.unshift({
+            fecha: new Date().toLocaleString(),
+            tipo: m.tipo,
+            nombre_producto: producto.nombre_producto,
+            nombre_almacen: almacen.nombre_almacen,
+            cantidad: m.cantidad,
+            comentario: m.comentario
+          });
+
+          Swal.fire('Movimiento registrado', 'El inventario ha sido actualizado.', 'success');
+          this.movimiento = {
+            tipo: '',
+            id_producto: null,
+            id_almacen: null,
+            cantidad: null,
+            costo_unitario: null,
+            comentario: ''
+          };
+        },
+        async cargarDatosDummy() {
+          this.almacenes = Array.from({ length: 3 }, (_, i) => ({
+            id: i + 1,
+            nombre_almacen: `Almacén ${i + 1}`
+          }));
+
+
+
+
+          await fetch('productos.json')
+            .then(res => res.json())
+            .then(data => {
+              this.productos = data.map(p => {
+                //console.log(p); // ahora sí está bien
+                return {
+                  id: p.id,
+                  nombre_producto: p.nombre_producto,
+                  stock: Math.floor(Math.random() * 100)
+                };
+              });
+            })
+            .catch(err => {
+              console.error('Error al cargar productos.json:', err);
+              Swal.fire('Error', 'No se pudieron cargar los productos.', 'error');
+            });
+
+
+
+          // this.productos = Array.from({ length: 10 }, (_, i) => ({
+          //   id: i + 1,
+          //   nombre_producto: `Producto ${i + 1}`,
+          //   stock: Math.floor(Math.random() * 100)
+          // }));
+
+          const tipos = ['ENTRADA', 'SALIDA', 'AJUSTE'];
+          for (let i = 0; i < 20; i++) {
+            const tipo = tipos[i % 3];
+            const producto = this.productos[i % this.productos.length];
+            const almacen = this.almacenes[i % this.almacenes.length];
+            const cantidad = Math.floor(Math.random() * 50 + 1);
+            const comentario = tipo === 'AJUSTE' ? 'Revisión periódica de inventario' : 'Registro automático del sistema';
+
+
+            this.movimientos.push({
+              fecha: new Date(Date.now() - i * 86400000).toLocaleDateString(),
+              tipo,
+              nombre_producto: producto.nombre_producto,
+              nombre_almacen: almacen.nombre_almacen,
+              cantidad,
+              comentario
+            });
+          }
+        }
+      },
+      mounted() {
+        this.cargarDatosDummy();
+      }
+    }).use(vuetify).mount('#app');
+  </script>
+</body>
+
+</html>

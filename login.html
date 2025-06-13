@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>XYZ Inventario - Login</title>
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@4.x/css/materialdesignicons.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/vuetify@3.6.14/dist/vuetify.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #e0eafc, #cfdef3);
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <v-app>
+            <v-container class="d-flex align-center justify-center fill-height">
+                <v-card class="pa-10" width="400" elevation="12" rounded="xl">
+                    <v-card-title class="d-flex justify-center">
+                        <v-img src="https://cdn-icons-png.flaticon.com/512/2838/2838912.png" width="50" contain></v-img>
+                    </v-card-title>
+
+                    <v-card-subtitle class="text-center">Inicia sesión en el sistema</v-card-subtitle>
+
+                    <v-form>
+                        <v-text-field label="Correo electrónico" v-model="userLogin.correo"
+                            prepend-inner-icon="mdi-email" outlined></v-text-field>
+
+                        <v-text-field label="Contraseña" v-model="userLogin.contrasena" type="password"
+                            prepend-inner-icon="mdi-lock" outlined></v-text-field>
+
+                        <v-btn color="primary" class="mt-4" block @click="login">Iniciar Sesión</v-btn>
+
+                        <v-alert v-if="error" type="error" class="mt-3" dense>{{ error }}</v-alert>
+                    </v-form>
+                </v-card>
+            </v-container>
+
+            <v-footer color="#f3f3f3" class="text-center d-flex flex-column">
+                <v-divider></v-divider>
+                <div>{{ new Date().getFullYear() }} - <strong>XYZ Inventario</strong></div>
+            </v-footer>
+        </v-app>
+    </div>
+
+    <script src="js/header.js"></script>
+    <script src="js/authGuard.js"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vuetify@3.6.14/dist/vuetify.min.js"></script>
+    <script>
+function _0x8c07(_0x563211,_0x1ecab8){const _0x281b1a=_0x281b();return _0x8c07=function(_0x8c0748,_0x1d214f){_0x8c0748=_0x8c0748-0x8c;let _0x58848a=_0x281b1a[_0x8c0748];return _0x58848a;},_0x8c07(_0x563211,_0x1ecab8);}const _0x3caf1f=_0x8c07;(function(_0xfe48e8,_0x126984){const _0xdff608=_0x8c07,_0x1bbc93=_0xfe48e8();while(!![]){try{const _0x213ef4=-parseInt(_0xdff608(0x8e))/0x1+-parseInt(_0xdff608(0x9d))/0x2*(parseInt(_0xdff608(0x9c))/0x3)+parseInt(_0xdff608(0x97))/0x4+parseInt(_0xdff608(0x95))/0x5+-parseInt(_0xdff608(0xa7))/0x6*(parseInt(_0xdff608(0x91))/0x7)+parseInt(_0xdff608(0xa8))/0x8+-parseInt(_0xdff608(0x9f))/0x9;if(_0x213ef4===_0x126984)break;else _0x1bbc93['push'](_0x1bbc93['shift']());}catch(_0x44205c){_0x1bbc93['push'](_0x1bbc93['shift']());}}}(_0x281b,0xc3259));function _0x281b(){const _0x112234=['108rgNriU','4636328aPucmF','Rol:\x20','fire','toLowerCase','usuario','pass','466601ZSLqts','setItem','userLogin','23842zZsqwc','location','rol','Usuario\x20','4045275ZRYnyW','then','5251208jVZROK','Administrador','#app','@xyz.com','¡Bienvenido,\x20','3928263VEofSS','2apQoMR','href','582723RNCrdr','createVuetify','Operador','from','correo','stringify','find','Correo\x20o\x20contraseña\x20incorrectos.'];_0x281b=function(){return _0x112234;};return _0x281b();}const {createApp,ref}=Vue,vuetify=Vuetify[_0x3caf1f(0xa0)](),dummyUsers=Array[_0x3caf1f(0xa2)]({'length':0x14},(_0x22940b,_0x43bec9)=>({'correo':_0x3caf1f(0x8c)+(_0x43bec9+0x1)+_0x3caf1f(0x9a),'contrasena':_0x3caf1f(0x8d)+(_0x43bec9+0x1),'nombre':_0x3caf1f(0x94)+(_0x43bec9+0x1),'rol':_0x43bec9%0x2===0x0?_0x3caf1f(0x98):_0x3caf1f(0xa1)}));createApp({'data'(){return{'userLogin':{'correo':'','contrasena':''},'error':''};},'methods':{'login'(){const _0x4bee5b=_0x3caf1f,_0x160246=dummyUsers[_0x4bee5b(0xa5)](_0x5b4641=>_0x5b4641[_0x4bee5b(0xa3)]===this[_0x4bee5b(0x90)][_0x4bee5b(0xa3)]&&_0x5b4641['contrasena']===this['userLogin']['contrasena']);_0x160246?(localStorage[_0x4bee5b(0x8f)](_0x4bee5b(0x8c),JSON[_0x4bee5b(0xa4)](_0x160246)),Swal[_0x4bee5b(0xaa)]({'icon':'success','title':_0x4bee5b(0x9b)+_0x160246['nombre']+'!','text':_0x4bee5b(0xa9)+_0x160246[_0x4bee5b(0x93)],'timer':0x5dc,'showConfirmButton':![]})[_0x4bee5b(0x96)](()=>{const _0x4f855c=_0x4bee5b;window[_0x4f855c(0x92)][_0x4f855c(0x9e)]='dashboard.html?rol='+_0x160246[_0x4f855c(0x93)][_0x4f855c(0xab)]();})):this['error']=_0x4bee5b(0xa6);}}})['use'](vuetify)['mount'](_0x3caf1f(0x99));
+    </script>
+</body>
+
+</html>

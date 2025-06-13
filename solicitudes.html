@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Solicitudes de Abastecimiento</title>
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font@5.x/css/materialdesignicons.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@3.6.14/dist/vuetify.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    body {
+      background-color: #f5f5f5;
+    }
+
+    .status-chip {
+      text-transform: uppercase;
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+    <v-app>
+      <v-container>
+        <h2 class="my-4">Solicitudes de Abastecimiento</h2>
+
+        <v-card class="pa-4 mb-5" elevation="5">
+          <h4 class="mb-4">Nueva Solicitud</h4>
+          <v-form @submit.prevent="crearSolicitud" ref="formSolicitud">
+            <v-row>
+              <v-col cols="12" md="4">
+                <v-select v-model="solicitud.id_producto" :items="productos" item-title="nombre_producto"
+                  item-value="id" label="Producto" required />
+              </v-col>
+              <v-col cols="12" md="4">
+                <v-select v-model="solicitud.id_almacen" :items="almacenes" item-title="nombre_almacen" item-value="id"
+                  label="Almacén" required />
+              </v-col>
+              <v-col cols="12" md="4">
+                <v-text-field label="Cantidad Solicitada" type="number" v-model.number="solicitud.cantidad_solicitada"
+                  min="1" required />
+              </v-col>
+              <v-col cols="12">
+                <v-textarea label="Comentario" v-model="solicitud.comentario" auto-grow />
+              </v-col>
+              <v-col cols="12">
+                <v-btn type="submit" color="primary" prepend-icon="mdi-send" block>Enviar Solicitud</v-btn>
+              </v-col>
+            </v-row>
+          </v-form>
+        </v-card>
+
+        <v-card class="pa-4" elevation="3">
+          <h4 class="mb-3">Historial de Solicitudes</h4>
+          <v-data-table :headers="headers" :items="solicitudes" :search="busqueda" items-per-page="10"
+            class="elevation-1" density="comfortable">
+            <template #top>
+              <v-text-field v-model="busqueda" label="Buscar..." prepend-inner-icon="mdi-magnify" class="mb-4" />
+            </template>
+
+            <template #item.estado="{ item }">
+              <v-chip :color="colorEstado(item.estado)" class="status-chip" dark size="small">
+                {{ item.estado }}
+              </v-chip>
+            </template>
+
+            <template #item.acciones="{ item }">
+              <v-btn icon @click="editarSolicitud(item)" :disabled="item.estado !== 'PENDIENTE'">
+                <v-icon>mdi-pencil</v-icon>
+              </v-btn>
+              <v-btn icon @click="cambiarEstado(item, 'EN_PROCESO')" v-if="item.estado === 'PENDIENTE'">
+                <v-icon color="blue">mdi-timer-sand</v-icon>
+              </v-btn>
+              <v-btn icon @click="cambiarEstado(item, 'COMPLETADA')" v-if="item.estado === 'EN_PROCESO'">
+                <v-icon color="green">mdi-check</v-icon>
+              </v-btn>
+              <v-btn icon @click="cambiarEstado(item, 'RECHAZADA')" v-if="item.estado !== 'COMPLETADA'">
+                <v-icon color="red">mdi-cancel</v-icon>
+              </v-btn>
+            </template>
+          </v-data-table>
+        </v-card>
+
+        <v-dialog v-model="dialogEditar" max-width="500px">
+          <v-card>
+            <v-card-title>Editar Comentario</v-card-title>
+            <v-card-text>
+              <v-textarea label="Comentario" v-model="solicitudEdit.comentario" />
+            </v-card-text>
+            <v-card-actions>
+              <v-spacer></v-spacer>
+              <v-btn color="grey" @click="dialogEditar = false">Cancelar</v-btn>
+              <v-btn color="primary" @click="guardarComentario">Guardar</v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
+      </v-container>
+    </v-app>
+  </div>
+
+  <script src="https://unpkg.com/vue@3"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@3.6.14/dist/vuetify.min.js"></script>
+  <script>
+    const { createApp } = Vue;
+    const vuetify = Vuetify.createVuetify();
+
+    createApp({
+      data() {
+        return {
+          dialogEditar: false,
+          busqueda: '',
+          headers: [
+            { title: 'ID', key: 'id' },
+            { title: 'Producto', key: 'nombre_producto' },
+            { title: 'Almacén', key: 'nombre_almacen' },
+            { title: 'Cantidad', key: 'cantidad_solicitada' },
+            { title: 'Estado', key: 'estado' },
+            { title: 'Comentario', key: 'comentario' },
+            { title: 'Fecha', key: 'fecha' },
+            { title: 'Acciones', key: 'acciones', sortable: false }
+          ],
+          solicitud: {
+            id_producto: null,
+            id_almacen: null,
+            cantidad_solicitada: null,
+            comentario: ''
+          },
+          solicitudEdit: {},
+          solicitudes: [],
+          productos: [],
+          almacenes: []
+        };
+      },
+      methods: {
+        crearSolicitud() {
+          if (!this.solicitud.id_producto || !this.solicitud.id_almacen || !this.solicitud.cantidad_solicitada) {
+            Swal.fire('Campos incompletos', 'Llena todos los campos requeridos', 'warning');
+            return;
+          }
+
+          const prod = this.productos.find(p => p.id === this.solicitud.id_producto);
+          const alm = this.almacenes.find(a => a.id === this.solicitud.id_almacen);
+
+          this.solicitudes.unshift({
+            id: this.solicitudes.length + 1,
+            nombre_producto: prod.nombre_producto,
+            nombre_almacen: alm.nombre_almacen,
+            cantidad_solicitada: this.solicitud.cantidad_solicitada,
+            estado: 'PENDIENTE',
+            comentario: this.solicitud.comentario,
+            fecha: new Date().toLocaleString()
+          });
+
+          Swal.fire('¡Solicitud enviada!', '', 'success');
+
+          this.solicitud = {
+            id_producto: null,
+            id_almacen: null,
+            cantidad_solicitada: null,
+            comentario: ''
+          };
+        },
+        editarSolicitud(item) {
+          this.solicitudEdit = item;
+          this.dialogEditar = true;
+        },
+        guardarComentario() {
+          Swal.fire('Comentario actualizado', '', 'success');
+          this.dialogEditar = false;
+        },
+        cambiarEstado(item, nuevoEstado) {
+          item.estado = nuevoEstado;
+          Swal.fire('Estado actualizado', `Nuevo estado: ${nuevoEstado}`, 'info');
+        },
+        colorEstado(estado) {
+          switch (estado) {
+            case 'PENDIENTE': return 'orange';
+            case 'EN_PROCESO': return 'blue';
+            case 'COMPLETADA': return 'green';
+            case 'RECHAZADA': return 'red';
+            default: return 'grey';
+          }
+        },
+        async cargarDummyData() {
+
+          await fetch('productos.json')
+            .then(res => res.json())
+            .then(data => {
+              this.productos = data.map(p => ({
+                id: p.id,
+                nombre_producto: p.nombre_producto
+              }));
+            })
+            .catch(err => {
+              console.error('Error al cargar productos.json:', err);
+              Swal.fire('Error', 'No se pudieron cargar los productos.', 'error');
+            });
+
+
+          // this.productos = Array.from({ length: 10 }, (_, i) => ({
+          //   id: i + 1,
+          //   nombre_producto: `Producto ${i + 1}`
+          // }));
+
+          this.almacenes = Array.from({ length: 5 }, (_, i) => ({
+            id: i + 1,
+            nombre_almacen: `Almacén ${i + 1}`
+          }));
+
+          for (let i = 1; i <= 20; i++) {
+            this.solicitudes.push({
+              id: i,
+              nombre_producto: `Producto ${((i - 1) % 10) + 1}`,
+              nombre_almacen: `Almacén ${((i - 1) % 5) + 1}`,
+              cantidad_solicitada: Math.floor(Math.random() * 100) + 1,
+              estado: ['PENDIENTE', 'EN_PROCESO', 'COMPLETADA', 'RECHAZADA'][i % 4],
+              comentario: `Comentario de solicitud ${i}`,
+              fecha: new Date(Date.now() - i * 3600000).toLocaleString()
+            });
+          }
+        }
+      },
+      mounted() {
+        this.cargarDummyData();
+      }
+    }).use(vuetify).mount('#app');
+  </script>
+</body>
+
+</html>

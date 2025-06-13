@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard - XYZ Inventario</title>
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font@4.x/css/materialdesignicons.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css" />
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@3.6.14/dist/vuetify.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    body {
+      background: #f8f9fa;
+    }
+
+    .card-hover:hover {
+      transform: translateY(-5px);
+      box-shadow: 0px 6px 20px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease-in-out;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+    <v-app>
+      <v-container>
+        <v-row class="my-5">
+          <v-col cols="12">
+            <h2>Bienvenido, {{ usuario.nombre }} ({{ usuario.rol }})</h2>
+            <v-divider class="my-4"></v-divider>
+          </v-col>
+        </v-row>
+
+        <v-row>
+          <v-col cols="12" md="4" v-for="card in tarjetasFiltradas" :key="card.titulo">
+            <v-card class="pa-5 card-hover" elevation="8" @click="goTo(card.enlace)">
+              <v-icon size="36" class="mb-3">{{ card.icono }}</v-icon>
+              <h5 class="font-weight-bold">{{ card.titulo }}</h5>
+              <p class="text-muted">{{ card.descripcion }}</p>
+            </v-card>
+          </v-col>
+        </v-row>
+      </v-container>
+
+      <v-footer color="#f3f3f3" class="text-center d-flex flex-column">
+        <v-divider></v-divider>
+        <div>{{ new Date().getFullYear() }} - <strong>XYZ Inventario</strong></div>
+      </v-footer>
+    </v-app>
+  </div>
+
+  <script src="js/header.js"></script>
+  <script src="js/authGuard.js"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@3.6.14/dist/vuetify.min.js"></script>
+  <script>
+    const { createApp } = Vue;
+    const vuetify = Vuetify.createVuetify();
+
+    createApp({
+      data() {
+        return {
+          usuario: {
+            nombre: '',
+            rol: ''
+          },
+          tarjetas: [
+            { titulo: 'Usuarios', rol: ['Administrador'], descripcion: 'Administra usuarios y roles.', icono: 'mdi-account-cog-outline', enlace: 'usuarios.html' },
+            { titulo: 'Productos', rol: ['Administrador', 'Operador'], descripcion: 'Gestiona el catálogo de productos.', icono: 'mdi-cube-outline', enlace: 'productos.html' },
+            { titulo: 'Categorías', rol: ['Administrador', 'Operador'], descripcion: 'Administra categorías de productos.', icono: 'mdi-shape-outline', enlace: 'categorias.html' },
+            { titulo: 'Almacenes', rol: ['Administrador', 'Operador'], descripcion: 'Administra los almacenes.', icono: 'mdi-warehouse', enlace: 'almacenes.html' },
+            { titulo: 'Stock x Almacén', rol: ['Administrador', 'Operador'], descripcion: 'Consulta el inventario por ubicación.', icono: 'mdi-map-marker-radius', enlace: 'stock.html' },
+            { titulo: 'Movimientos', rol: ['Administrador', 'Operador'], descripcion: 'Entradas, salidas y ajustes.', icono: 'mdi-swap-horizontal-bold', enlace: 'movimientos.html' },
+            { titulo: 'Ventas', rol: ['Administrador', 'Operador'], descripcion: 'Registra y consulta ventas.', icono: 'mdi-cart-outline', enlace: 'ventas.html' },
+            { titulo: 'Solicitudes', rol: ['Administrador'], descripcion: 'Gestión de abastecimientos.', icono: 'mdi-truck-fast', enlace: 'solicitudes.html' },
+            { titulo: 'Ajustes de Inventario', rol: ['Administrador'], descripcion: 'Control de ajustes manuales.', icono: 'mdi-wrench', enlace: 'ajustes.html' },
+            { titulo: 'Reportes', rol: ['Administrador'], descripcion: 'Exporta datos en Excel.', icono: 'mdi-file-chart-outline', enlace: 'reportes.html' }
+          ]
+        };
+      },
+      computed: {
+        tarjetasFiltradas() {
+          return this.tarjetas.filter(t => t.rol.includes(this.usuario.rol));
+        }
+      },
+      methods: {
+        goTo(ruta) {
+          window.location.href = ruta;
+        }
+      },
+      mounted() {
+        const user = JSON.parse(localStorage.getItem('usuario') || '{}');
+        if (user?.nombre && user?.rol) {
+          this.usuario = user;
+        }
+      }
+    }).use(vuetify).mount('#app');
+  </script>
+</body>
+
+</html>

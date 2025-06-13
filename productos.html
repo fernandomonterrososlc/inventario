@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Productos - XYZ Inventario</title>
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font@4.x/css/materialdesignicons.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@3.6.14/dist/vuetify.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    body {
+      background: #f9fafb;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+    <v-app>
+      <v-container>
+        <h2 class="my-4">Gestión de Productos</h2>
+        <v-btn color="primary" prepend-icon="mdi-plus" class="mb-4" @click="abrirModal(null)">Agregar Producto</v-btn>
+
+        <v-data-table :headers="headers" :items="productos" :search="busqueda" class="elevation-1" items-per-page="5">
+          <template #top>
+            <v-text-field v-model="busqueda" label="Buscar producto..." prepend-inner-icon="mdi-magnify" class="mb-3" />
+          </template>
+
+          <template #item.acciones="{ item }">
+            <v-btn icon @click="abrirModal(item)">
+              <v-icon>mdi-pencil</v-icon>
+            </v-btn>
+            <v-btn icon @click="eliminarProducto(item)">
+              <v-icon color="red">mdi-delete</v-icon>
+            </v-btn>
+          </template>
+        </v-data-table>
+
+        <!-- Modal -->
+        <v-dialog v-model="modal" max-width="600px">
+          <v-card>
+            <v-card-title class="text-h6">
+              {{ productoSeleccionado.id ? 'Editar Producto' : 'Nuevo Producto' }}
+            </v-card-title>
+
+            <v-form ref="form" @submit.prevent="guardarProducto">
+              <v-card-text>
+                <v-row dense>
+                  <v-col cols="12">
+                    <v-text-field label="Código" v-model="productoSeleccionado.codigo_producto" required />
+                  </v-col>
+
+                  <v-col cols="12">
+                    <v-text-field label="Nombre" v-model="productoSeleccionado.nombre_producto" required />
+                  </v-col>
+
+                  <v-col cols="12">
+                    <v-text-field label="Precio Compra" type="number" v-model="productoSeleccionado.precio_compra"
+                      required />
+                  </v-col>
+
+                  <v-col cols="12">
+                    <v-text-field label="Precio Venta" type="number" v-model="productoSeleccionado.precio_venta"
+                      required />
+                  </v-col>
+
+                  <v-col cols="12">
+                    <v-text-field label="Stock Mínimo" type="number" v-model="productoSeleccionado.stock_minimo"
+                      required />
+                  </v-col>
+                </v-row>
+              </v-card-text>
+
+              <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn color="grey" @click="modal = false">Cancelar</v-btn>
+                <v-btn color="primary" type="submit">Guardar</v-btn>
+              </v-card-actions>
+            </v-form>
+          </v-card>
+        </v-dialog>
+
+      </v-container>
+    </v-app>
+  </div>
+
+  <script src="js/header.js"></script>
+  <script src="js/authGuard.js"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@3.6.14/dist/vuetify.min.js"></script>
+  <script>
+    const { createApp, ref } = Vue;
+    const vuetify = Vuetify.createVuetify();
+
+    createApp({
+      data() {
+        return {
+          busqueda: '',
+          modal: false,
+          headers: [
+            { title: 'Código', key: 'codigo_producto' },
+            { title: 'Nombre', key: 'nombre_producto' },
+            { title: 'Precio Compra', key: 'precio_compra' },
+            { title: 'Precio Venta', key: 'precio_venta' },
+            { title: 'Stock Mínimo', key: 'stock_minimo' },
+            { title: 'Acciones', key: 'acciones', sortable: false }
+          ],
+          productos: [],
+          productoSeleccionado: this.nuevoProducto()
+        }
+      },
+      methods: {
+        nuevoProducto() {
+          return {
+            id: null,
+            codigo_producto: '',
+            nombre_producto: '',
+            precio_compra: 0,
+            precio_venta: 0,
+            stock_minimo: 0
+          }
+        },
+        abrirModal(producto) {
+          this.productoSeleccionado = producto ? { ...producto } : this.nuevoProducto();
+          this.modal = true;
+        },
+        guardarProducto() {
+          if (this.productoSeleccionado.id) {
+            // Editar
+            const index = this.productos.findIndex(p => p.id === this.productoSeleccionado.id);
+            if (index !== -1) this.productos[index] = { ...this.productoSeleccionado };
+            Swal.fire('¡Editado!', 'Producto actualizado correctamente.', 'success');
+          } else {
+            // Agregar
+            this.productoSeleccionado.id = Date.now();
+            this.productos.push({ ...this.productoSeleccionado });
+            Swal.fire('¡Agregado!', 'Producto creado exitosamente.', 'success');
+          }
+          this.modal = false;
+        },
+        eliminarProducto(producto) {
+          Swal.fire({
+            title: '¿Eliminar producto?',
+            text: producto.nombre_producto,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar'
+          }).then((result) => {
+            if (result.isConfirmed) {
+              this.productos = this.productos.filter(p => p.id !== producto.id);
+              Swal.fire('Eliminado', 'Producto eliminado.', 'success');
+            }
+          });
+        },
+        generarDummy() {
+
+          fetch('productos.json')
+            .then(res => res.json())
+            .then(data => {
+              this.productos = data;
+            })
+            .catch(err => {
+              console.error("Error cargando productos:", err);
+              Swal.fire("Error", "No se pudieron cargar los productos.", "error");
+            });
+
+          // for (let i = 1; i <= 56; i++) {
+          //   this.productos.push({
+          //     id: i,
+          //     codigo_producto: 'PDT' + String(i).padStart(4, '0'),
+          //     nombre_producto: `Producto ${i}`,
+          //     precio_compra: (Math.random() * 100).toFixed(2),
+          //     precio_venta: (Math.random() * 150).toFixed(2),
+          //     stock_minimo: Math.floor(Math.random() * 20) + 5
+          //   });
+          // }
+        }
+      },
+      mounted() {
+        this.generarDummy();
+      }
+    }).use(vuetify).mount('#app');
+  </script>
+</body>
+
+</html>
